@@ -1,10 +1,13 @@
 import os
-import pandas as pandas
+import sys
+import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib import colors
 import numpy as np
-from util import df_filter, plot_line, df_to_geojson, dump_geojson, generate_geogjosn_name
-from Filelogger import Filelogger
+from numpy import abs  as npabs
+from util import df_filter, plot_line, df_to_geojson, dump_geojson, generate_geogjosn_name, create_gasInfo_path
+from Geologger import Geologger
+
 
 
 class AnalyseHH:
@@ -15,9 +18,9 @@ class AnalyseHH:
             df (pandas dataframe):  dataframe contianing gas data
             gas (String):  the gas to be analysed
     """
-    # INFOLOGGER_PATH = '/var/www/html/hhmaps/HH/available_geojsons.json'
-    INFOLOGGER_PATH = '/Users/kurosh/Documents/Draeger/HHData/available_geojsons.json'
-    file_logger = Filelogger(INFOLOGGER_PATH)
+    INFOLOGGER_PATH =  '/var/www/html/hhmaps/HH/geoJsonInfo.json'
+    # INFOLOGGER_PATH ='/Users/kurosh/Documents/Draeger/HHData/geoJsonInfo.json'
+    geoLogger = Geologger(INFOLOGGER_PATH, True)
 
     def __init__(self, logFileName, df, gas):
         self.logFileName = logFileName
@@ -38,9 +41,9 @@ class AnalyseHH:
             self.threshold50 = self.mean + 2 * self.quarter_dist
             self.threshold75 = self.mean + 3 * self.quarter_dist
             self.df50 = self.df_filtered.query(
-                'gas_value > {}'.format(self.threshold50))
+                '@npabs(gas_value) > {}'.format(self.threshold50))
             self.df75 = self.df_filtered.query(
-                'gas_value > {}'.format(self.threshold75))
+                '@npabs(gas_value) > {}'.format(self.threshold75))
             self.VALUE_FLAG = False
 
         else:
@@ -98,20 +101,27 @@ class AnalyseHH:
 
         # general format of the fileName is like HH1-11012021_O3_50.geojson
         # extract infos from fileName
-        fullPath = os.path.join(path, fileName+'.geojson')
+        # we don't need a fullpath just after www/html/ 
+         
+        # fullPath = os.path.join(path, fileName+'.geojson')
+        _path = create_gasInfo_path(path)
+        fullPath = os.path.join(_path, fileName+'.geojson')
         name = fileName.split('.')[0]
-        splitted = name.split('_')
-        hhtype = splitted[0].split('-')[0]
-        gas = splitted[1]
-        percentage = splitted[2]
-        date = splitted[0].split('-')[1]
+        splitted = name.split('-')
+        hhtype = splitted[0]
+        date = splitted[1]
+        gas = splitted[2]
+        percentage = splitted[3]
         date = date[0:2] + '-' + date[2:4] + '-' + date[4:8]
         gasInfo = {
             "path": fullPath,
             "percentage": percentage,
             "fileName": fileName,
         },
-        self.file_logger.add_new_gasInfo(date, gas, gasInfo, hhtype)
-
+        self.geoLogger.add_new_gasInfo(date, gas, gasInfo, hhtype)
+     
+     
+    
     def finalize(self):
-        self.file_logger.dump_geojson()
+        self.geoLogger.dump_geojson()
+        

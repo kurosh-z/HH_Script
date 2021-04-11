@@ -7,6 +7,8 @@ import logging
 import datetime
 
 
+# AnalyseHH.INFOLOGGER_PATH = '/var/www/html/hhmaps/HH/geoJsonInfo.json'
+
 def main():
 
     header = ['type', 'bt_MAC', 'date', 'time', 'sensor_mode', 'alarm_state',
@@ -15,19 +17,36 @@ def main():
               'latitude', 'longitude', 'GPS_time', 'GPS_speed',
               'GPS_position_validity_mode', 'number_of_visible_GPS_satelite']
 
-    # logPath = '/Users/kurosh/Documents/Draeger/HHData/HH1'
-    # geoJsonPath = '/Users/kurosh/Documents/Draeger/HHData/HH1_Geojson'
+  
 
-    # loglist = fileList(logPath, '.log')
+    
 
+    # logsToBeAnalysed = [
+    #     {
+    #         'logPath': '/Users/kurosh/Documents/Draeger/HHData/HH1',
+    #         'geoJsonPath': '/var/www/html/hhmaps/HH/HH1_Geojson'
+    #     },
+    #     {
+    #         'logPath': '/Users/kurosh/Documents/Draeger/HHData/HH2',
+    #         'geoJsonPath': '/var/www/html/hhmaps/HH/HH2_Geojson'
+    #     }
+    # ]
     logsToBeAnalysed = [
         {
-            'logPath': '/Users/kurosh/Documents/Draeger/HHData/HH1',
+            'logPath': '/var/www/html/HH_Data/HH1',
             'geoJsonPath': '/var/www/html/hhmaps/HH/HH1_Geojson'
         },
         {
-            'logPath': '/Users/kurosh/Documents/Draeger/HHData/HH2',
+            'logPath': '/var/www/html/HH_Data/HH2',
             'geoJsonPath': '/var/www/html/hhmaps/HH/HH2_Geojson'
+        },
+        {
+            'logPath': '/var/www/html/HH_Data/HH3',
+            'geoJsonPath': '/var/www/html/hhmaps/HH/HH3_Geojson'
+        },
+        {
+            'logPath': '/var/www/html/HH_Data/HH4',
+            'geoJsonPath': '/var/www/html/hhmaps/HH/HH4_Geojson'
         }
     ]
 
@@ -49,14 +68,22 @@ def main():
                 # csvName = logFileName.split('.')[0] + '.csv'
                 csvName = generate_csv_name(logFileName)
                 # open csv with pandas:
+                #TODO: some log files cannot be loaded with latitude and longitude of type float! 
+                #      workaround: I load them with object type and turn them to float later in pd.filter 
                 df = pd.read_csv(os.path.join(
-                    geoJsonPath, csvName), names=header, low_memory=False)
+                    geoJsonPath, csvName), names=header, encoding='utf-8', dtype={
+                    'type': str, 'bt_MAC':str, 'date':str, 'time':str, 'sensor_mode':int, 'alarm_state':str,
+                    'battery_state':str, 'measurement_unit_channel_code':str,
+                    'measurement_unit_channel_number':str, 'gas_value': float, 'unit':str, 'temprature':float,
+                    'latitude':object, 'longitude':object, 'GPS_time':str, 'GPS_speed':str,
+                    'GPS_position_validity_mode':str, 'number_of_visible_GPS_satelite':float
+                 })
                 analyse_data(df, logFileName, geoJsonPath)
                 # remove temp csv file
                 remove_csv_file(geoJsonPath, csvName)
 
-    # dump log file to be used in javascript
-    AnalyseHH.file_logger.dump_log()
+    # dump json file to be used in javascript
+    AnalyseHH.geoLogger.dump_log()
 
 
 def analyse_data(df, logFileName, geoJsonPath):
@@ -83,20 +110,13 @@ if __name__ == '__main__':
     dt = str(dt).replace(":", '-')
     dt.replace(" ", "")
     loggingName += dt+'.log'
-    loggingName = '/Users/kurosh/Documents/Draeger/HHData/HH_Script/log/' + loggingName
+    # loggingName = '/Users/kurosh/Documents/Draeger/HHData/HH_Script/log/' + loggingName
+    loggingName = '/var/www/html/HH_Script/log/' + loggingName
+    
 
     logging.basicConfig(filename=loggingName, filemode='w',
                         format='%(asctime)s - %(message)s', level=logging.INFO)
     # call main function
     main()
 
-    # logsToBeAnalysed = [
-    #     {
-    #         'logPath': '/ var/www/html/HH_Data/HH1,
-    #         'geoJsonPath': '/var/www/html/hhmaps/HH/HH1_Geojson'
-    #     },
-    #     {
-    #         'logPath': '/var/www/html/HH_Data/HH2',
-    #         'geoJsonPath': '/var/www/html/hhmaps/HH/HH2_Geojson'
-    #     }
-    # ]
+   

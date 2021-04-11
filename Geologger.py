@@ -1,18 +1,28 @@
 import json
+import sys
 
 
-class Filelogger(object):
+class Geologger(object):
     """Singelton Calass which generates log file for analysed data to be used in javascript
         Args:
             logPath (String): path to the log template or existing log
+            forceCreate (boolean): force creating new json file 
+            **ATENTION: use this option just once otherwise it rewrite the json every time 
+                        it runs! (or just copy the json template to destination folder)
     """
 
     def init(self, logPath, *args, **kwargs):
 
         self.logPath = logPath
-        with open(logPath, 'r') as f:
-            logJSON = json.load(f)
-        self.logJSON = logJSON
+      
+        try:
+            with open(logPath, 'r') as f:
+                logJSON = json.load(f)
+            self.logJSON = logJSON
+        except:
+             raise("Oops!", sys.exc_info()[0], "occurred. if you run this for the first time " \
+                 "make sure that there exist a simple template json file in destination folder "\
+                  "the template json you can find in HH_script folder \n\n") 
 
     def __new__(cls, *args, **kwds):
         it = cls.__dict__.get("__it__")

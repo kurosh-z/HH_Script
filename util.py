@@ -11,6 +11,9 @@ logger = logging.getLogger(__name__)
 #                     General Utility Functions
 ########################################################################
 
+PROPERTIES= ['type', 'date', 'time', 'sensor_mode', 'alarm_state',
+               'gas_value', 'unit', 'temprature',
+              'latitude', 'longitude', 'GPS_time']
 
 def fileList(path, ending=None, ScanSubFolder=False):
     """[returns the list of all files in a path]
@@ -103,14 +106,35 @@ def generate_geogjosn_name(logFileName, gasType, percentage):
     con1 = percentage == 50
     con2 = percentage == 75
     if (con1):
-        per = '_50'
+        per = '-50'
     if (con2):
-        per = '_75'
+        per = '-75'
     if(not (con1 or con2)):
         raise Exception('expected 50 or 75 got :{}'.format(percentage))
-    return logFileName.split('.')[0] + '_' + gasType + per
+    return logFileName.split('.')[0] + '-' + gasType + per
 
+def create_gasInfo_path(path):
+    """creates path to be used in gasInfo (look at AnalyseHH.py)
 
+    Args:
+        path (string): original path with /var/www/html/path/to/
+
+    Returns:
+        path [string]: return the path aftar => /path/to
+    """
+    splitted = path.split('/')
+    index=1.5
+    for idx, el in enumerate(splitted):
+        if(el == 'html'):
+            index = idx+1
+            break
+    
+    if(isinstance(index, int)):
+        return '/'+ '/'.join(splitted[index: len(splitted)])
+    else:
+        raise Exception('expected a path in /var/www/html got: "{}"'.format(path))       
+    
+    
 def is_geogjson_exist(gPath, gName):
     # if the gPath dosesn't exist yet return false
     if not os.path.exists(gPath):
@@ -144,7 +168,7 @@ def remove_csv_file(path, fileName):
             'expected a file with extension .csv but recieved:{}'.format(fileName))
 
 
-def df_filter(df, gasType, absVal=True):
+def df_filter(df, gasType):
     """returns a filtered pandas dataframe according to gasType 
         and Validity of GPS and drop the NaN or inf values
 
@@ -152,11 +176,9 @@ def df_filter(df, gasType, absVal=True):
     Args:
         df (pandas dataframe): dataframe to be filtered
         gasType (String): gas type which new dataframe generated for
-        absVal (Boolean): if it should take the absolute values of the 
-                          gas data. Defaults to True
     """
-
-    return df.query('type == "{}" & GPS_position_validity_mode != 0 & gas_value != inf  & @pd.notna(gas_value)'.format(gasType))
+    df[["latitude", "longitude"]] = df[["latitude", "longitude"]].apply(pd.to_numeric, errors='coerce')
+    return df.query('type == "{}" & GPS_position_validity_mode != 0 & gas_value != inf  & @pd.notna(gas_value) & @pd.notna(latitude) & @pd.notna(longitude)'.format(gasType))
 
 
 def df_to_geojson(df, properties, extraProps):
@@ -181,7 +203,8 @@ def df_to_geojson(df, properties, extraProps):
         feature['geometry']['coordinates'] = [
             row['longitude'], row['latitude']]
         for prop in properties:
-            feature['properties'][prop] = row[prop]
+            if(prop in PROPERTIES):
+                feature['properties'][prop] = row[prop]
         # add extra properties
         for key, value in extraProps.items():
             feature['properties'][key] = value
