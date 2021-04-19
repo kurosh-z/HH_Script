@@ -158,8 +158,8 @@ class AnalyseHH:
 #     # TESTING
 #     from util import logToCsv, csvToDataFrame
 
-#     logFileName = "HH1-10022021.log"
-#     csvName = "HH1-10022021.csv"
+#     logFileName = "HH1-17022021.log"
+#     csvName = "HH1-17022021.csv"
 #     logPath = "/Users/kurosh/Documents/Draeger/HHData/HH_Data/HH1/02/"
 #     csvPath = "/Users/kurosh/Documents/Draeger/HHData/test/"
 #     geoJsonPath = "/var/www/html/hhmaps/HH/HH1_Geojson"
@@ -176,5 +176,6 @@ class AnalyseHH:
 #         ah.dump_geojsons(geoJsonPath)
 #         gjInfoCreator = GeoJsonInfoCreator()
 #         gjInfoCreator.dump()
+#         ah.plot_distribution()
 #     else:
 #         print("value flag is true!")

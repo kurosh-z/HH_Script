@@ -1,9 +1,11 @@
 import os
 import csv
 import json
+import logging
+from datetime import date
 import numpy as np
 import pandas as pd
-import logging
+
 
 logger = logging.getLogger(__name__)
 # logging.basicConfig(filename='createGeoJson.log', filemode='w',
@@ -11,6 +13,9 @@ logger = logging.getLogger(__name__)
 ########################################################################
 #                     General Utility Functions
 ########################################################################
+
+EXCEPTION_PATH = "/var/www/html/HH_Script/exceptions.npy"
+
 
 PROPERTIES = [
     "type",
@@ -136,6 +141,44 @@ def fileList(path, ending=None, ScanSubFolder=False):
         return files, path_list
 
     return files
+
+
+def get_today():
+    today = date.today()
+    todayStr = today.strftime("%d-%m-%Y")
+    return todayStr
+
+
+def is_logFile_for_today(logFileName):
+    today = get_today().replace("-", "")
+    logDate = (logFileName.split(".")[0]).split("-")[1]
+
+    return today == logDate
+
+
+def load_exeptions():
+    """loads exceptions log file names that shouldn't be considered in
+        analysises
+
+    Returns:
+        [np.array]: 1D np.array of filenames
+    """
+    try:
+        with open(EXCEPTION_PATH, "rb") as f:
+            exceptions = np.load(f)
+            f.close()
+            return exceptions
+
+    ## if it's called for the first time just return an empty array
+    except:
+        return np.array([])
+
+
+def dump_exceptions(exceptions):
+    with open(EXCEPTION_PATH, "wb") as f:
+        np.save(f, exceptions)
+    f.close()
+    logger.info(" Exceptions are stored in: {} ".format(EXCEPTION_PATH))
 
 
 def chooseRandIndices(pdSeries, maxSize=30):
