@@ -154,28 +154,28 @@ class AnalyseHH:
     #     self.geoLogger.dump_geojson()
 
 
-# if __name__ == "__main__":
-#     # TESTING
-#     from util import logToCsv, csvToDataFrame
+if __name__ == "__main__":
+    # TESTING
+    from util import logToCsv, csvToDataFrame
 
-#     logFileName = "HH1-17022021.log"
-#     csvName = "HH1-17022021.csv"
-#     logPath = "/Users/kurosh/Documents/Draeger/HHData/HH_Data/HH1/02/"
-#     csvPath = "/Users/kurosh/Documents/Draeger/HHData/test/"
-#     geoJsonPath = "/var/www/html/hhmaps/HH/HH1_Geojson"
-#     numColumns = logToCsv(logPath, logFileName, csvPath)
-#     df = csvToDataFrame(csvPath, csvName, numColumns)
-#     ah = AnalyseHH(logFileName, df, "SO2")
-#     if not ah.VALUE_FLAG:
-#         print(ah.max)
-#         print(ah.min)
-#         print(ah.mean)
-#         print(ah.threshold75)
-#         print(ah.threshold50)
-#         ah.create_geojsons()
-#         ah.dump_geojsons(geoJsonPath)
-#         gjInfoCreator = GeoJsonInfoCreator()
-#         gjInfoCreator.dump()
-#         ah.plot_distribution()
-#     else:
-#         print("value flag is true!")
+    logFileName = "HH1-17022021.log"
+    csvName = "HH1-17022021.csv"
+    logPath = "/Users/kurosh/Documents/Draeger/HHData/HH_Data/HH1/02/"
+    csvPath = "/Users/kurosh/Documents/Draeger/HHData/test/"
+    geoJsonPath = "/var/www/html/hhmaps/HH/HH1_Geojson"
+    numColumns = logToCsv(logPath, logFileName, csvPath)
+    df = csvToDataFrame(csvPath, csvName, numColumns)
+    ah = AnalyseHH(logFileName, df, "SO2")
+    if not ah.VALUE_FLAG:
+        print(ah.max)
+        print(ah.min)
+        print(ah.mean)
+        print(ah.threshold75)
+        print(ah.threshold50)
+        ah.create_geojsons()
+        ah.dump_geojsons(geoJsonPath)
+        gjInfoCreator = GeoJsonInfoCreator()
+        gjInfoCreator.dump()
+        ah.plot_distribution()
+    else:
+        print("value flag is true!")

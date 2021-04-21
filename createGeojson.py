@@ -1,6 +1,11 @@
 import os
+import logging
+import datetime
 import pandas as pd
 import numpy as np
+from AnalyseHH import AnalyseHH
+from GeoJsonInfoCreator import GeoJsonInfoCreator
+
 from util import (
     fileList,
     is_geogjson_exist,
@@ -9,19 +14,18 @@ from util import (
     generate_csv_name,
     generate_geogjosn_name,
     csvToDataFrame,
-    load_exeptions,
-    dump_exceptions,
     is_logFile_for_today,
 )
-from AnalyseHH import AnalyseHH
-from GeoJsonInfoCreator import GeoJsonInfoCreator
-import logging
-import datetime
 
 
 def main():
+    gjInfo = GeoJsonInfoCreator()
 
     # logsToBeAnalysed = [
+    #     {
+    #         "logPath": "/Users/kurosh/Documents/Draeger/HHData/HH_Data/2020",
+    #         "geoJsonPath": "/var/www/html/hhmaps/HH/2020_Geojson",
+    #     },
     #     {
     #         "logPath": "/Users/kurosh/Documents/Draeger/HHData/HH_Data/HH1",
     #         "geoJsonPath": "/var/www/html/hhmaps/HH/HH1_Geojson",
@@ -41,7 +45,7 @@ def main():
 
     gasList = ["SO2", "NO2", "O3"]
     # load exception list (files which already analysed and after filtering had no valid data in them )
-    exceptions = load_exeptions()
+    # exceptions = load_exeptions()
 
     for log_geoJson in logsToBeAnalysed:
         logPath = log_geoJson["logPath"]
@@ -54,25 +58,25 @@ def main():
             logFileName = log_dir_tupel[0]
             logFilePath = log_dir_tupel[1]
             gName = generate_geogjosn_name(logFileName, "SO2", 50)
-            # check if the file is in exception list or from today
-            shouldBeSkipped = check_exceptions(exceptions, logFileName) or is_logFile_for_today(logFileName)
 
-            if not is_geogjson_exist(geoJsonPath, gName) and not shouldBeSkipped:
+            if not gjInfo.is_already_done(logFileName):
                 # convert log files to a temporary csv
                 numColumns = logToCsv(logFilePath, logFileName, geoJsonPath)
-                # csvName = logFileName.split('.')[0] + '.csv'
-                csvName = generate_csv_name(logFileName)
-                # open csv with pandas:
-                df = csvToDataFrame(geoJsonPath, csvName, numColumns)
-                for gas in gasList:
-                    gas_analyse = AnalyseHH(logFileName, df, gas)
-                    if gas_analyse.VALUE_FLAG:
-                        exceptionName = logFileName.split(".")[0] + "-" + gas
-                        exceptions = np.hstack((exceptions, np.array([exceptionName])))
-                        logging.warning(" There is no valid value for gas {} log file: {} ".format(gas, logFileName))
-                    else:
-                        gas_analyse.create_geojsons()
-                        gas_analyse.dump_geojsons(geoJsonPath)
+                if numColumns == "EMPTY":
+                    # exceptions = add_empty_file_to_exceptions(exceptions, logFileName)
+                    gjInfo.add_Exceptions(logFileName)
+                else:
+                    # csvName = logFileName.split('.')[0] + '.csv'
+                    csvName = generate_csv_name(logFileName)
+                    # open csv with pandas:
+                    df = csvToDataFrame(geoJsonPath, csvName, numColumns)
+                    for gas in gasList:
+                        gas_analyse = AnalyseHH(logFileName, df, gas)
+                        if gas_analyse.VALUE_FLAG:
+                            gjInfo.add_Exceptions(logFileName, gas)
+                        else:
+                            gas_analyse.create_geojsons()
+                            gas_analyse.dump_geojsons(geoJsonPath)
 
                 # analyse_data(df, logFileName, geoJsonPath)
                 # remove temp csv file
@@ -80,37 +84,8 @@ def main():
 
     # dump json file to be used in javascript
     # AnalyseHH.geoLogger.dump_log()
-    gjInfoCreator = GeoJsonInfoCreator()
-    gjInfoCreator.dump()
-    dump_exceptions(exceptions)
 
-
-def check_exceptions(exceptions, logFileName):
-    ## checks if all exceptions for different gas exit in exceptions
-
-    gasList = ["SO2", "NO2", "O3"]
-    for gas in gasList:
-        exceptionName = logFileName.split(".")[0] + "-" + gas
-        if not np.isin(exceptionName, exceptions).item():
-            return False
-
-    return True
-
-
-# def analyse_data(df, logFileName, geoJsonPath, exceptions):
-#     # gasList = ['SO2', 'NO2', 'O3']
-#     gasList = ["SO2", "NO2", "O3"]
-#     for gas in gasList:
-#         gas_analyse = AnalyseHH(logFileName, df, gas)
-#         # gas_analyse.plot_distribution()
-#         # if value is empty do nothing!
-#         if gas_analyse.VALUE_FLAG:
-#             # print("WARNING: There is no valid value for gas {} log file: {} ".format(gas, logFileName))
-#             # np.hstack((exceptions, np.array(logFileName)))
-#             logging.warning(" There is no valid value for gas {} log file: {} ".format(gas, logFileName))
-#         else:
-#             gas_analyse.create_geojsons()
-#             gas_analyse.dump_geojsons(geoJsonPath)
+    gjInfo.dump()
 
 
 ##################################################################################

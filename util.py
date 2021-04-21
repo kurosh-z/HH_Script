@@ -14,8 +14,6 @@ logger = logging.getLogger(__name__)
 #                     General Utility Functions
 ########################################################################
 
-EXCEPTION_PATH = "/var/www/html/HH_Script/exceptions.npy"
-
 
 PROPERTIES = [
     "type",
@@ -156,31 +154,6 @@ def is_logFile_for_today(logFileName):
     return today == logDate
 
 
-def load_exeptions():
-    """loads exceptions log file names that shouldn't be considered in
-        analysises
-
-    Returns:
-        [np.array]: 1D np.array of filenames
-    """
-    try:
-        with open(EXCEPTION_PATH, "rb") as f:
-            exceptions = np.load(f)
-            f.close()
-            return exceptions
-
-    ## if it's called for the first time just return an empty array
-    except:
-        return np.array([])
-
-
-def dump_exceptions(exceptions):
-    with open(EXCEPTION_PATH, "wb") as f:
-        np.save(f, exceptions)
-    f.close()
-    logger.info(" Exceptions are stored in: {} ".format(EXCEPTION_PATH))
-
-
 def chooseRandIndices(pdSeries, maxSize=30):
     """generates random indices of an pandas series
        without replacement including min and max values!
@@ -223,6 +196,7 @@ def logToCsv(logPath, logName, savePath):
 
     Return:
         num_columns (int): number of columns in the log
+        'EMPTY' (str): if there are less than 10 lines in a file
     """
     logText = open(os.path.join(logPath, logName), "r")
 
@@ -234,6 +208,8 @@ def logToCsv(logPath, logName, savePath):
 
     # check (for example 3rd line!) if the log file has 16 or 18 columns
     all_lines = logText.readlines()
+    if len(all_lines) < 10:
+        return "EMPTY"
     line3 = all_lines[3]
     numColumns = len(line3.split(" "))
     con16 = numColumns == 16
@@ -344,7 +320,9 @@ def remove_csv_file(path, fileName):
     """
 
     if fileName.split(".")[-1] == "csv":
-        os.remove(os.path.join(path, fileName))
+        filePath = os.path.join(path, fileName)
+        if os.path.exists(filePath):
+            os.remove(filePath)
     else:
         raise Exception("expected a file with extension .csv but recieved:{}".format(fileName))
 

@@ -37,6 +37,41 @@ class GeoJsonInfoCreator(object):
         it.init(*args, **kwds)
         return it
 
+    def add_Exceptions(self, logFileName, gas=None):
+        exceptions = []
+        gasList = ["SO2", "NO2", "O3"]
+        if gas:
+            gasList = [gas]
+        thresholds = ["50", "75"]
+        if not gas:
+            logger.warning(" The log file has less than 10 entries: {}".format(logFileName))
+
+        for gas in gasList:
+            logger.warning(" There is no valid value for gas {} log file: {} ".format(gas, logFileName))
+            for threshold in thresholds:
+                exceptionName = logFileName.split(".")[0] + "-" + gas + "-" + threshold
+                exceptions.append(exceptionName)
+
+        if "EXCEPTIONS" in self.geoJsonInfo:
+            self.geoJsonInfo["EXCEPTIONS"].extend(exceptions)
+        else:
+            self.geoJsonInfo["EXCEPTIONS"] = exceptions
+
+    def is_already_done(self, logFileName):
+
+        if not "EXCEPTIONS" in self.geoJsonInfo:
+            self.geoJsonInfo["EXCEPTIONS"] = []
+
+        gasList = ["SO2", "NO2", "O3"]
+        thresholds = ["50", "75"]
+        for gas in gasList:
+            for threshold in thresholds:
+                exceptionName = logFileName.split(".")[0] + "-" + gas + "-" + threshold
+                if not exceptionName in self.geoJsonInfo["EXCEPTIONS"] and not exceptionName in self.geoJsonInfo:
+                    return False
+
+        return True
+
     def dump(self):
         with open(self.GEOJSONINFO_PATH, "w") as f:
             json.dump(self.geoJsonInfo, f)
