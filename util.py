@@ -207,9 +207,14 @@ def logToCsv(logPath, logName, savePath):
         logger.info("directory created for saving csv files: {}".format(savePath))
 
     # check (for example 3rd line!) if the log file has 16 or 18 columns
-    all_lines = logText.readlines()
+    all_lines = []
+    try:
+        all_lines = logText.readlines()
+    except Exception as e:
+        print(logName)
+        return e
     if len(all_lines) < 10:
-        return "EMPTY"
+        return "The log file has less than 10 entries!"
     line3 = all_lines[3]
     numColumns = len(line3.split(" "))
     con16 = numColumns == 16

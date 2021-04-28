@@ -4,6 +4,9 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+GEOJSONINFO_HH_PATH = "/var/www/html/hhmaps/HH/geoJsonInfoHH.json"
+GEOJSONINFO_HL_PATH = "/var/www/html/hhmaps/HL/geoJsonInfoHL.json"
+
 
 class GeoJsonInfoCreator(object):
     """Singelton Calass which generates log file for analysed data to be used in javascript
@@ -13,20 +16,26 @@ class GeoJsonInfoCreator(object):
 
     """
 
-    GEOJSONINFO_PATH = "/var/www/html/hhmaps/HH/geoJsonInfo.json"
-
     def init(self, *args, **kwargs):
+        self.path = ""
+
+        if args[0] == "HH":
+            self.path = GEOJSONINFO_HH_PATH
+        elif args[0] == "HL":
+            self.path = GEOJSONINFO_HL_PATH
+        else:
+            raise Exception('expected to recieve HH or HL as argument got:"{}"'.format(args[0]))
+
         try:
-            with open(self.GEOJSONINFO_PATH, "r") as f:
+            with open(self.path, "r") as f:
                 print("geoJsonInfo opened")
                 self.geoJsonInfo = json.load(f)
 
         except:
-            with open(self.GEOJSONINFO_PATH, "w") as f:
+            with open(self.path, "w") as f:
                 self.geoJsonInfo = {}
                 json.dump(self.geoJsonInfo, f)
-                print("geoJsonInfo created")
-                logger.info("new geoJsonInfo created in : {}".format(self.GEOJSONINFO_PATH))
+                logger.info("new geoJsonInfo created in : {}".format(self.path))
         f.close()
 
     def __new__(cls, *args, **kwds):
@@ -37,17 +46,25 @@ class GeoJsonInfoCreator(object):
         it.init(*args, **kwds)
         return it
 
-    def add_Exceptions(self, logFileName, gas=None):
+    # def add_Exceptions(self, logFileName, logType, gas=None, errMsg=None,):
+    def add_Exceptions(self, **kwargs):
+        logType = kwargs.get("logType")
+        logFileName = kwargs.get("logFileName")
+        gas = kwargs.get("gas", None)
+        errMsg = kwargs.get("errMsg")
+
         exceptions = []
-        gasList = ["SO2", "NO2", "O3"]
+        gasList = []
+        thresholds = ["50", "75"]
         if gas:
             gasList = [gas]
-        thresholds = ["50", "75"]
-        if not gas:
-            logger.warning(" The log file has less than 10 entries: {}".format(logFileName))
+        else:
+            gasList = ["SO2", "NO2", "O3"] if logType == "HH" else ["H2S", "NO2", "O3", "SO2"]
+            logger.warning("there is a problem with log file {} - details: \r\n {}".format(logFileName, errMsg))
 
         for gas in gasList:
-            logger.warning(" There is no valid value for gas {} log file: {} ".format(gas, logFileName))
+            if not gas and not errMsg:
+                logger.warning(" There is no valid value for gas {} log file: {} ".format(gas, logFileName))
             for threshold in thresholds:
                 exceptionName = logFileName.split(".")[0] + "-" + gas + "-" + threshold
                 exceptions.append(exceptionName)
@@ -57,12 +74,12 @@ class GeoJsonInfoCreator(object):
         else:
             self.geoJsonInfo["EXCEPTIONS"] = exceptions
 
-    def is_already_done(self, logFileName):
+    def is_already_done(self, logFileName, logType):
 
         if not "EXCEPTIONS" in self.geoJsonInfo:
             self.geoJsonInfo["EXCEPTIONS"] = []
 
-        gasList = ["SO2", "NO2", "O3"]
+        gasList = ["SO2", "NO2", "O3"] if (logType == "HH") else ["H2S", "NO2", "O3", "SO2"]
         thresholds = ["50", "75"]
         for gas in gasList:
             for threshold in thresholds:
@@ -73,6 +90,6 @@ class GeoJsonInfoCreator(object):
         return True
 
     def dump(self):
-        with open(self.GEOJSONINFO_PATH, "w") as f:
+        with open(self.path, "w") as f:
             json.dump(self.geoJsonInfo, f)
-        logger.info("geoJsonInfo sucessfully dumped in : {}".format(self.GEOJSONINFO_PATH))
+        logger.info("geoJsonInfo sucessfully dumped in : {}".format(self.path))

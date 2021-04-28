@@ -32,14 +32,15 @@ class AnalyseHH:
     # INFOLOGGER_PATH = "/var/www/html/hhmaps/HH/geoJsonInfo.json"
     # INFOLOGGER_PATH ='/Users/kurosh/Documents/Draeger/HHData/geoJsonInfo.json'
     # geoLogger = Geologger(INFOLOGGER_PATH, True)
-    gjInfoCreator = GeoJsonInfoCreator()
+    # gjInfoCreator =
 
-    def __init__(self, logFileName, df, gas):
+    def __init__(self, logFileName, df, gas, option):
         self.logFileName = logFileName
         self.df = df
         self.gas = gas
         self.df_filtered = df_filter(df, gas)
         self.values = self.df_filtered["gas_value"].abs()
+        self.gjInfoCreator = GeoJsonInfoCreator(option)
         # print("analysing gas: {} from logfile: {}".format(gas, logFileName))
         # if there is any value continue
         if len(self.values):
@@ -158,11 +159,11 @@ if __name__ == "__main__":
     # TESTING
     from util import logToCsv, csvToDataFrame
 
-    logFileName = "HH1-17022021.log"
-    csvName = "HH1-17022021.csv"
-    logPath = "/Users/kurosh/Documents/Draeger/HHData/HH_Data/HH1/02/"
+    logFileName = "HLSR418-03112020.log"
+    csvName = "HLSR418-02112020.csv"
+    logPath = "/Users/kurosh/Documents/Draeger/HHData/HL_Data/2020/11"
     csvPath = "/Users/kurosh/Documents/Draeger/HHData/test/"
-    geoJsonPath = "/var/www/html/hhmaps/HH/HH1_Geojson"
+    geoJsonPath = "/var/www/html/hhmaps/HH/HL_Geojson"
     numColumns = logToCsv(logPath, logFileName, csvPath)
     df = csvToDataFrame(csvPath, csvName, numColumns)
     ah = AnalyseHH(logFileName, df, "SO2")

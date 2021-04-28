@@ -1,6 +1,4 @@
-import os
-import logging
-import datetime
+import os, sys, logging, datetime, argparse
 import pandas as pd
 import numpy as np
 from AnalyseHH import AnalyseHH
@@ -18,34 +16,34 @@ from util import (
 )
 
 
-def main():
-    gjInfo = GeoJsonInfoCreator()
+HH_LOGS = [
+    {"logPath": "/var/www/html/HH_Data/2020", "geoJsonPath": "/var/www/html/hhmaps/HH/2020_Geojson"},
+    {"logPath": "/var/www/html/HH_Data/HH1", "geoJsonPath": "/var/www/html/hhmaps/HH/HH1_Geojson"},
+    {"logPath": "/var/www/html/HH_Data/HH2", "geoJsonPath": "/var/www/html/hhmaps/HH/HH2_Geojson"},
+    {"logPath": "/var/www/html/HH_Data/HH3", "geoJsonPath": "/var/www/html/hhmaps/HH/HH3_Geojson"},
+    {"logPath": "/var/www/html/HH_Data/HH4", "geoJsonPath": "/var/www/html/hhmaps/HH/HH4_Geojson"},
+]
 
-    # logsToBeAnalysed = [
-    #     {
-    #         "logPath": "/Users/kurosh/Documents/Draeger/HHData/HH_Data/2020",
-    #         "geoJsonPath": "/var/www/html/hhmaps/HH/2020_Geojson",
-    #     },
-    #     {
-    #         "logPath": "/Users/kurosh/Documents/Draeger/HHData/HH_Data/HH1",
-    #         "geoJsonPath": "/var/www/html/hhmaps/HH/HH1_Geojson",
-    #     },
-    #     {
-    #         "logPath": "/Users/kurosh/Documents/Draeger/HHData/HH_Data/HH2",
-    #         "geoJsonPath": "/var/www/html/hhmaps/HH/HH2_Geojson",
-    #     },
-    # ]
-    logsToBeAnalysed = [
-        {"logPath": "/var/www/html/HH_Data/2020", "geoJsonPath": "/var/www/html/hhmaps/HH/2020_Geojson"},
-        {"logPath": "/var/www/html/HH_Data/HH1", "geoJsonPath": "/var/www/html/hhmaps/HH/HH1_Geojson"},
-        {"logPath": "/var/www/html/HH_Data/HH2", "geoJsonPath": "/var/www/html/hhmaps/HH/HH2_Geojson"},
-        {"logPath": "/var/www/html/HH_Data/HH3", "geoJsonPath": "/var/www/html/hhmaps/HH/HH3_Geojson"},
-        {"logPath": "/var/www/html/HH_Data/HH4", "geoJsonPath": "/var/www/html/hhmaps/HH/HH4_Geojson"},
-    ]
+HL_LOGS = [
+    {"logPath": "/var/www/html/HL_Data/2020", "geoJsonPath": "/var/www/html/hhmaps/HL/HL_Geojson"},
+    {"logPath": "/var/www/html/HL_Data/2021/", "geoJsonPath": "/var/www/html/hhmaps/HL/HL_Geojson"},
+    {"logPath": "/var/www/html/HL_Data/HLSR499/", "geoJsonPath": "/var/www/html/hhmaps/HL/HL_Geojson"},
+    {"logPath": "/var/www/html/HL_DataHL/SR499/2021", "geoJsonPath": "/var/www/html/hhmaps/HL/HL_Geojson"},
+]
 
-    gasList = ["SO2", "NO2", "O3"]
-    # load exception list (files which already analysed and after filtering had no valid data in them )
-    # exceptions = load_exeptions()
+
+def main(logType):
+
+    gjInfo = GeoJsonInfoCreator(logType)
+    gasList = []
+
+    logsToBeAnalysed = []
+    if logType == "HH":
+        logsToBeAnalysed = HH_LOGS
+        gasList = ["SO2", "NO2", "O3"]
+    elif logType == "HL":
+        logsToBeAnalysed = HL_LOGS
+        gasList = ["H2S", "NO2", "O3", "SO2"]
 
     for log_geoJson in logsToBeAnalysed:
         logPath = log_geoJson["logPath"]
@@ -57,23 +55,24 @@ def main():
             # check if the file already exist its enought to just check for one gas with 50%
             logFileName = log_dir_tupel[0]
             logFilePath = log_dir_tupel[1]
-            gName = generate_geogjosn_name(logFileName, "SO2", 50)
+            # gName = generate_geogjosn_name(logFileName, "SO2", 50)
 
-            if not gjInfo.is_already_done(logFileName):
+            if not gjInfo.is_already_done(logFileName, logType):
                 # convert log files to a temporary csv
                 numColumns = logToCsv(logFilePath, logFileName, geoJsonPath)
-                if numColumns == "EMPTY":
-                    # exceptions = add_empty_file_to_exceptions(exceptions, logFileName)
-                    gjInfo.add_Exceptions(logFileName)
+                if not isinstance(numColumns, int):
+
+                    gjInfo.add_Exceptions(**{"logFileName": logFileName, "errMsg": numColumns, "logType": logType})
                 else:
                     # csvName = logFileName.split('.')[0] + '.csv'
                     csvName = generate_csv_name(logFileName)
                     # open csv with pandas:
                     df = csvToDataFrame(geoJsonPath, csvName, numColumns)
                     for gas in gasList:
-                        gas_analyse = AnalyseHH(logFileName, df, gas)
+                        gas_analyse = AnalyseHH(logFileName, df, gas, logType)
                         if gas_analyse.VALUE_FLAG:
-                            gjInfo.add_Exceptions(logFileName, gas)
+                            # gjInfo.add_Exceptions(logFileName, gas)
+                            gjInfo.add_Exceptions(**{"logFileName": logFileName, "gas": gas, "logType": logType})
                         else:
                             gas_analyse.create_geojsons()
                             gas_analyse.dump_geojsons(geoJsonPath)
@@ -90,13 +89,23 @@ def main():
 
 ##################################################################################
 if __name__ == "__main__":
-    loggingName = "createGeoJson_"
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-OP", "--option", help="specifies the type of logs to be analysed", choices=["HH", "HL"])
+    logType = parser.parse_args().option
+    loggingName = ""
+    if logType == "HL":
+        loggingName = "HL_createGeoJson_"
+    elif logType == "HH":
+        loggingName = "HH_createGeoJson_"
+    else:
+        raise Exception("worng --option argument! Run the command with --help to see more Info")
+
     dt = datetime.datetime.now()
     dt = str(dt).replace(":", "-")
     dt = dt.replace(" ", "_")
     loggingName += dt + ".log"
-    loggingName = "/Users/kurosh/Documents/Draeger/HHData/HH_Script/log/" + loggingName
-    # loggingName = "/var/www/html/HH_Script/log/" + loggingName
+    # loggingName = "/Users/kurosh/Documents/Draeger/HHData/HH_Script/log/" + loggingName
+    loggingName = "/var/www/html/HH_Script/log/" + loggingName
 
     logging.basicConfig(
         filename=loggingName,
@@ -112,5 +121,4 @@ if __name__ == "__main__":
     console.setFormatter(formatter)
     logging.getLogger("").addHandler(console)
     # call main function
-
-    main()
+    main(logType)
